@@ -30,6 +30,8 @@ def get_status():
 
     global automode
     status["automode"] = automode
+    status["light"] = read_light_value()
+    status["human"] = read_human_value()
     return jsonify(status), 200
 
 
@@ -47,35 +49,52 @@ def set_auto(state):
 
 light_value = None
 light_value_lock = threading.Lock()
+humman_value = None
+humman_value_lock = threading.Lock()
 
 def light_gpio():
     light_pin = 27
     wiringpi.pinMode(light_pin, GPIO.INPUT)
+    humman_pin = 26
+    wiringpi.pinMode(humman_pin, GPIO.INPUT)
 
     global light_value
     global automode
     global running
+    global humman_value
 
     last_value = None
     while running:
+        current_human_value = wiringpi.digitalRead(humman_pin)
+        with humman_value_lock:
+            humman_value = current_human_value
         current_value = wiringpi.digitalRead(light_pin)
-        if current_value != last_value:
-            with light_value_lock:
-                light_value = current_value
-            if automode:
-                if current_value:
-                    wiringpi.digitalWrite(3, GPIO.HIGH)
-                    wiringpi.digitalWrite(4, GPIO.LOW)
-                else:
-                    wiringpi.digitalWrite(3, GPIO.LOW)
-                    wiringpi.digitalWrite(4, GPIO.HIGH)
-            print("Giá trị đọc được thay đổi:", current_value)
-            last_value = current_value
+        if current_human_value:
+            if current_value != last_value:
+                with light_value_lock:
+                    light_value = current_value
+                if automode:
+                    if current_value:
+                        wiringpi.digitalWrite(3, GPIO.HIGH)
+                        wiringpi.digitalWrite(4, GPIO.LOW)
+                    else:
+                        wiringpi.digitalWrite(3, GPIO.LOW)
+                        wiringpi.digitalWrite(4, GPIO.HIGH)
+                print("Giá trị đọc được thay đổi:", current_value)
+                last_value = current_value
+        else:
+            wiringpi.digitalWrite(4, GPIO.HIGH)
+            wiringpi.digitalWrite(3, GPIO.HIGH)
+            last_value = -1
         wiringpi.delay(1000)
 
 def read_light_value():
     with light_value_lock:
         return light_value
+    
+def read_human_value():
+    with humman_value_lock:
+        return humman_value
 
 if __name__ == '__main__':
     gpio_thread = threading.Thread(target=light_gpio)

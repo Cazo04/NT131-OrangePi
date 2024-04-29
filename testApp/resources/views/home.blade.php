@@ -24,10 +24,12 @@
             .custom-checkbox .form-check-input {
                 transform: scale(1.5);
             }
+
             .custom-checkbox .form-check-label {
                 font-size: 1.3rem;
                 margin-left: 1.5rem;
             }
+
             .custom-checkbox {
                 height: 3rem;
                 margin-left: 3rem;
@@ -39,17 +41,17 @@
             <h2>Delays Control Panel</h2>
             <div id="gpio-controls">
                 <div class="row">
-                    <div class="col-2 bg-primary-subtle" id="lightDelays">
+                    <div class="col-6 col-lg-3 bg-primary-subtle" id="lightDelays">
                         <div class="form-check form-switch custom-checkbox">
                             <input class="form-check-input" type="checkbox" id="gpio3" checked>
-                            <label class="form-check-label" for="gpio3">Delay 1</label>
+                            <label class="form-check-label" for="gpio3">Main light</label>
                         </div>
                         <div class="form-check form-switch custom-checkbox">
                             <input class="form-check-input" type="checkbox" id="gpio4" checked>
-                            <label class="form-check-label" for="gpio4">Delay 2</label>
+                            <label class="form-check-label" for="gpio4">Sleep light</label>
                         </div>
                     </div>
-                    <div class="col-2 bg-primary-subtle justify-content-center d-flex flex-column rounded-end">
+                    <div class="col-6 col-lg-2 bg-primary-subtle justify-content-center d-flex flex-column rounded-end">
                         <div class="form-check form-switch custom-checkbox">
                             <input class="form-check-input" type="checkbox" id="automode" checked>
                             <label class="form-check-label" for="automode">Auto</label>
@@ -66,21 +68,42 @@
                 </div>
             </div>
         </div>
+        <div class="container mt-2 text-white bg-dark p-2 rounded overflow-hidden" data-bs-theme="dark">
+            <h2>Sensor Panel</h2>
+            <div id="sensor-view">
+                <div class="row">
+                    <div class="">Human presence:
+                        <span id="human">No</span>
+                    </div>
+                    <div class="mt-0">Light:
+                        <span id="light">No</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <script>
             $(document).ready(function() {
-                $.get("{{ route('delays') }}", function(data) {
-                    $.each(data, function(key, value) {
-                        var isChecked = (value === "LOW");
-                        if (key === 'automode') {
-                            isChecked = value;
-                            $("#lightDelays input").prop("disabled", isChecked);
-                        }
-                        $('#' + key).prop('checked', isChecked);
+                setInterval(function() {
+                    $.get("{{ route('delays') }}", function(data) {
+                        $.each(data, function(key, value) {
+                            if (key === 'human') {
+                                value = (value === 1) ? 'Yes' : 'No';
+                                $('#human').text(value);
+                            } else {
+                                var isChecked = (value === "LOW");
+                                if (key === 'automode') {
+                                    isChecked = value;
+                                    $("#lightDelays input").prop("disabled", isChecked);
+                                }
+                                $('#' + key).prop('checked', isChecked);
+                            }
+                        });
                     });
-                });
+                }, 1500);
 
                 $(".form-check-input").change(function() {
-                    if (this.id === 'automode'){
+                    if (this.id === 'automode') {
                         var state = $(this).is(':checked') ? 1 : 0;
                         $.get(`/auto/${state}`)
                             .done(function(data) {
