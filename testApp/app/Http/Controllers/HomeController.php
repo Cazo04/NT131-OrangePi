@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SystemStatus;
 use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 
@@ -11,6 +13,8 @@ class HomeController extends Controller
 {
     public function index()
     {
+        $systemStatus = SystemStatus::first();
+        if (Auth::check()) return view('home', ['systemStatus' => $systemStatus]);
         return view('home');
     }
     public function login()

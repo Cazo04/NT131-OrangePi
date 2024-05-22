@@ -18,5 +18,6 @@ Route::get('/logout', [HomeController::class, 'logout'])->name('logout');
 Route::middleware(['auth'])->group(function () {
     Route::get('/gpio/{pin}/{state}', [GPIOController::class, 'setGPIO'])->name('gpio');
     Route::get('/delays', [GPIOController::class, 'getDelaysStatus'])->name('delays');
-    Route::get('/auto/{state}', [GPIOController::class, 'setAutoMode'])->name('auto');
+    Route::get('/auto/{state}', [GPIOController::class, 'setAutomodeDatabase'])->name('auto');
+    Route::get('/sleeptime/{time}', [GPIOController::class, 'setSleepModeTimeDatabase'])->name('sleeptime');
 });

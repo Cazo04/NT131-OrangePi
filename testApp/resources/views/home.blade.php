@@ -53,7 +53,8 @@
                     </div>
                     <div class="col-6 col-lg-2 bg-primary-subtle justify-content-center d-flex flex-column rounded-end">
                         <div class="form-check form-switch custom-checkbox">
-                            <input class="form-check-input" type="checkbox" id="automode" checked>
+                            <input class="form-check-input" type="checkbox" id="automode"
+                                {{ $systemStatus->automode ? 'checked' : '' }}>
                             <label class="form-check-label" for="automode">Auto</label>
                         </div>
                     </div>
@@ -81,12 +82,66 @@
                 </div>
             </div>
         </div>
+        <div class="container mt-2 text-white bg-dark p-2 rounded overflow-hidden" data-bs-theme="dark">
+            <h2>Settings</h2>
+            <div>
+                <div class="row g-3">
+                    <label for="sleepTime" class="col-sm-2 col-form-label">Sleep time</label>
+                    <div class="col-auto">
+                        <input type="time" class="form-control" id="sleepTime"
+                            value="{{ isset($systemStatus) ? \Carbon\Carbon::parse($systemStatus->sleep_mode_time)->format('H:i') : '' }}">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary mb-3" id="btnSleepTime">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true"
+            data-bs-backdrop="static" data-bs-keyboard="false">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content">
+                    <div class="modal-body text-center bg-dark rounded-2 text-white">
+                        <div class="spinner-border text-primary my-4" style="width: 3rem; height: 3rem;" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div>
+                            Please wait while data is being uploaded.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <script>
             $(document).ready(function() {
+                function showLoadingModal() {
+                    var myModal = new bootstrap.Modal(document.getElementById('loadingModal'), {
+                        keyboard: false,
+                        backdrop: 'static'
+                    });
+                    myModal.show();
+                }
+
+                function hideLoadingModal() {
+                    var myModalEl = document.getElementById('loadingModal');
+                    var modal = bootstrap.Modal.getInstance(myModalEl);
+                    modal.hide();
+                }
+
+                if (!$('#automode').is(':checked')) {
+                    $("#lightDelays input").prop("disabled", true);
+                } else {
+                    $("#lightDelays input").prop("disabled", false);
+                }
+
                 setInterval(function() {
                     $.get("{{ route('delays') }}", function(data) {
                         $.each(data, function(key, value) {
+                            if (key === 'light') {
+                                value = (value === 0) ? 'Yes' : 'No';
+                                $('#light').text(value);
+                            } else
                             if (key === 'human') {
                                 value = (value === 1) ? 'Yes' : 'No';
                                 $('#human').text(value);
@@ -102,9 +157,26 @@
                     });
                 }, 1500);
 
+                $("#btnSleepTime").click(function() {
+                    var sleepTime = $('#sleepTime').val();
+                    showLoadingModal();
+                    $.get(`/sleeptime/${sleepTime}`)
+                        .done(function(data) {
+                            //console.log(data.message);
+                        })
+                        .fail(function(jqXHR, textStatus, errorThrown) {
+                            alert("Request failed: " + textStatus + " - " +
+                                errorThrown);
+                        })
+                        .always(function() {
+                            setTimeout(() => hideLoadingModal(), 1000);
+                        });
+                });
+
                 $(".form-check-input").change(function() {
                     if (this.id === 'automode') {
                         var state = $(this).is(':checked') ? 1 : 0;
+                        showLoadingModal();
                         $.get(`/auto/${state}`)
                             .done(function(data) {
                                 //console.log(data.message);
@@ -118,11 +190,15 @@
                             .fail(function(jqXHR, textStatus, errorThrown) {
                                 alert("Request failed: " + textStatus + " - " +
                                     errorThrown);
+                            })
+                            .always(function() {
+                                setTimeout(() => hideLoadingModal(), 1000);
                             });
                         return;
                     }
                     var pin = this.id.replace('gpio', '');
                     var state = $(this).is(':checked') ? 0 : 1;
+                    showLoadingModal();
                     $.get(`/gpio/${pin}/${state}`)
                         .done(function(data) {
                             //console.log(data.message);
@@ -130,6 +206,9 @@
                         .fail(function(jqXHR, textStatus, errorThrown) {
                             alert("Request failed: " + textStatus + " - " +
                                 errorThrown);
+                        })
+                        .always(function() {
+                            setTimeout(() => hideLoadingModal(), 1000);
                         });
                 });
             });
